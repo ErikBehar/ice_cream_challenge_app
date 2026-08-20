@@ -1,7 +1,9 @@
+import { DEFAULT_PAGE_TITLE } from "./page-title";
 import type { Classroom, Store } from "./types";
 
 export const DEFAULT_STORE: Store = {
   lastUpdated: "2026-08-20T18:41:00.000Z",
+  pageTitle: DEFAULT_PAGE_TITLE,
   overallGoal: 15000,
   overallRaised: 8420,
   classroomPercentTarget: 80,
@@ -21,6 +23,7 @@ export const DEFAULT_STORE: Store = {
 export function createEmptyStore(): Store {
   return {
     lastUpdated: new Date().toISOString(),
+    pageTitle: DEFAULT_PAGE_TITLE,
     overallGoal: 15000,
     overallRaised: 0,
     classroomPercentTarget: 80,

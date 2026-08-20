@@ -1,18 +1,22 @@
 "use client";
 
+import { PAGE_TITLE_MAX_LENGTH } from "@/lib/page-title";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function AdminSettingsForm({
+  pageTitle,
   overallGoal,
   classroomPercentTarget,
   donationUrl,
 }: {
+  pageTitle: string;
   overallGoal: number;
   classroomPercentTarget: number;
   donationUrl: string;
 }) {
   const router = useRouter();
+  const [title, setTitle] = useState(pageTitle);
   const [goal, setGoal] = useState(String(overallGoal));
   const [percent, setPercent] = useState(String(classroomPercentTarget));
   const [donateLink, setDonateLink] = useState(donationUrl);
@@ -30,6 +34,7 @@ export function AdminSettingsForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          pageTitle: title,
           overallGoal: Number(goal),
           classroomPercentTarget: Number(percent),
           donationUrl: donateLink,
@@ -49,6 +54,20 @@ export function AdminSettingsForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      <label className="block">
+        <span className="text-sm font-semibold text-chocolate">Page title</span>
+        <input
+          type="text"
+          maxLength={PAGE_TITLE_MAX_LENGTH}
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          className="mt-1 w-full rounded-xl border border-cream-dark bg-white px-3 py-2.5 text-chocolate outline-none ring-strawberry/30 focus:ring-2"
+          required
+        />
+        <span className="mt-1 block text-xs text-chocolate/60">
+          Shown as the heading on the public board and in the browser tab.
+        </span>
+      </label>
       <label className="block">
         <span className="text-sm font-semibold text-chocolate">
           Overall monetary funding goal (USD)

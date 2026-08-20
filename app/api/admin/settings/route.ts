@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { parseDonationUrl } from "@/lib/donation-url";
+import { PAGE_TITLE_MAX_LENGTH, parsePageTitle } from "@/lib/page-title";
 import { requireAdminApi } from "@/lib/session";
 import { updateStore } from "@/lib/store";
 
@@ -12,15 +13,25 @@ export async function POST(request: Request) {
   if (unauthorized) return unauthorized;
 
   const body = (await request.json().catch(() => null)) as {
+    pageTitle?: unknown;
     overallGoal?: unknown;
     classroomPercentTarget?: unknown;
     donationUrl?: unknown;
   } | null;
 
+  const pageTitle = parsePageTitle(body?.pageTitle);
   const overallGoal = Number(body?.overallGoal);
   const classroomPercentTarget = Number(body?.classroomPercentTarget);
   const donationUrl = parseDonationUrl(body?.donationUrl);
 
+  if (pageTitle === null) {
+    return NextResponse.json(
+      {
+        error: `Page title must be 1–${PAGE_TITLE_MAX_LENGTH} characters.`,
+      },
+      { status: 400 },
+    );
+  }
   if (!Number.isFinite(overallGoal) || overallGoal < 0) {
     return NextResponse.json(
       { error: "Overall goal must be a number that is 0 or greater." },
@@ -46,6 +57,7 @@ export async function POST(request: Request) {
 
   const store = await updateStore((current) => ({
     ...current,
+    pageTitle,
     overallGoal,
     classroomPercentTarget,
     donationUrl,

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fredoka, Nunito } from "next/font/google";
+import { readStore } from "@/lib/store";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -12,11 +13,15 @@ const fredoka = Fredoka({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Escondido PTA Ice Cream Challenge 2026",
-  description:
-    "Live fundraising and classroom scoop progress for the Escondido Elementary PTA Ice Cream Challenge.",
-};
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const store = await readStore();
+  return {
+    title: store.pageTitle,
+    description: `Live fundraising and classroom scoop progress for ${store.pageTitle}.`,
+  };
+}
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

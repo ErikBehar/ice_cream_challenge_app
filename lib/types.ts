@@ -7,6 +7,7 @@ export type Classroom = {
 
 export type Store = {
   lastUpdated: string;
+  pageTitle: string;
   overallGoal: number;
   overallRaised: number;
   classroomPercentTarget: number;

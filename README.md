@@ -21,6 +21,7 @@ Demo classrooms and totals are written to `data/store.json` by `npm run seed`. T
 
 The site keeps only tallies:
 
+- public page title
 - overall dollar goal and amount raised
 - classroom number, teacher name, student count, and scoop count
 - donation site URL
@@ -58,7 +59,7 @@ The app is a single Node web service. Tally data is a JSON file, so it needs a *
      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 4. Add a **Volume** to the service. Mount path `/data` is fine. Railway sets `RAILWAY_VOLUME_MOUNT_PATH`; the app writes `store.json` there. Do not skip this or CSV/goal updates disappear on the next deploy.
 5. Under **Settings → Networking**, generate a public domain (or attach a custom one). HTTPS is provided on `*.up.railway.app`.
-6. After the first deploy, open `/admin`, log in, set the donation URL and goals, then upload the classroom roster and donations CSVs.
+6. After the first deploy, open `/admin`, log in, set the page title, donation URL, and goals, then upload the classroom roster and donations CSVs.
 
 Build is `npm run build`. Start is `npm run start` (`next start --hostname 0.0.0.0`). Railway injects `PORT`.
 

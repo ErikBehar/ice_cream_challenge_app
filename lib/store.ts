@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { DEFAULT_PAGE_TITLE } from "./page-title";
 import { createEmptyStore, DEFAULT_STORE } from "./tallies";
 import type { Store } from "./types";
 
@@ -34,6 +35,7 @@ function isStore(value: unknown): value is Store {
     typeof store.overallGoal === "number" &&
     typeof store.overallRaised === "number" &&
     typeof store.classroomPercentTarget === "number" &&
+    (store.pageTitle === undefined || typeof store.pageTitle === "string") &&
     (store.donationUrl === undefined || typeof store.donationUrl === "string") &&
     Array.isArray(store.classrooms) &&
     store.classrooms.every(isClassroom)
@@ -41,8 +43,10 @@ function isStore(value: unknown): value is Store {
 }
 
 function withDefaults(store: Store): Store {
+  const pageTitle = store.pageTitle?.trim() || DEFAULT_PAGE_TITLE;
   return {
     ...store,
+    pageTitle,
     donationUrl: store.donationUrl ?? "",
   };
 }

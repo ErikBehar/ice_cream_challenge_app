@@ -31,11 +31,12 @@ export default async function AdminPage() {
 
       <div className="space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-md ring-1 ring-cream-dark">
-          <h2 className="font-display text-xl text-chocolate">Goals</h2>
+          <h2 className="font-display text-xl text-chocolate">Campaign</h2>
           <p className="mt-1 mb-4 text-sm text-chocolate/70">
             These values update the public page as soon as you save.
           </p>
           <AdminSettingsForm
+            pageTitle={store.pageTitle}
             overallGoal={store.overallGoal}
             classroomPercentTarget={store.classroomPercentTarget}
             donationUrl={store.donationUrl}
