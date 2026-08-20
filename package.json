@@ -2,11 +2,15 @@
   "name": "ice_cream_challenge_app",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start --hostname 0.0.0.0",
+    "lint": "eslint",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "next": "16.3.1",
@@ -21,6 +25,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }
