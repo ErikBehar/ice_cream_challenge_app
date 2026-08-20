@@ -1,4 +1,5 @@
 import { AdminSettingsForm } from "@/components/admin-settings-form";
+import { ClearDonationsButton } from "@/components/clear-donations-button";
 import { CsvUploadForm } from "@/components/csv-upload-form";
 import { LogoutButton } from "@/components/logout-button";
 import { readStore } from "@/lib/store";
@@ -78,6 +79,13 @@ export default async function AdminPage() {
             or Respondent + Student #1: Classroom, Student #1: First Name, …
           </p>
           <CsvUploadForm kind="donations" />
+          <div className="mt-6 border-t border-cream-dark pt-5">
+            <p className="mb-3 text-sm text-chocolate/70">
+              Reset the school total and every classroom scoop to zero. The roster
+              and campaign settings stay in place.
+            </p>
+            <ClearDonationsButton />
+          </div>
         </section>
       </div>
     </div>

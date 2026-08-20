@@ -32,6 +32,17 @@ export function createEmptyStore(): Store {
   };
 }
 
+export function clearDonations(store: Store): Store {
+  return {
+    ...store,
+    overallRaised: 0,
+    classrooms: store.classrooms.map((classroom) => ({
+      ...classroom,
+      scoops: 0,
+    })),
+  };
+}
+
 export function scoopPercent(classroom: Classroom): number {
   if (classroom.studentCount <= 0) return 0;
   return (classroom.scoops / classroom.studentCount) * 100;
