@@ -18,6 +18,6 @@ export function formatLastUpdated(iso: string): string {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: PACIFIC,
     dateStyle: "medium",
-    timeStyle: "short",
+    timeStyle: "medium",
   }).format(date);
 }

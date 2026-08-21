@@ -3,6 +3,7 @@ import { ClearDonationsButton } from "@/components/clear-donations-button";
 import { CsvUploadForm } from "@/components/csv-upload-form";
 import { LogoutButton } from "@/components/logout-button";
 import { ZeroTotalButton } from "@/components/zero-total-button";
+import { formatLastUpdated } from "@/lib/format";
 import { readStore } from "@/lib/store";
 import Link from "next/link";
 
@@ -19,6 +20,9 @@ export default async function AdminPage() {
           <h1 className="font-display text-3xl text-chocolate">
             Ice Cream Challenge
           </h1>
+          <p className="mt-1 text-sm text-chocolate/70">
+            Last updated {formatLastUpdated(store.lastUpdated)}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
