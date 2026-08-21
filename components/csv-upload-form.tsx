@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type UploadKind = "classrooms" | "donations";
+type UploadKind = "classrooms" | "donations" | "item-summary";
+
+const ENDPOINTS: Record<UploadKind, string> = {
+  classrooms: "/api/admin/classrooms/csv",
+  donations: "/api/admin/donations/csv",
+  "item-summary": "/api/admin/item-summary/csv",
+};
 
 export function CsvUploadForm({ kind }: { kind: UploadKind }) {
   const router = useRouter();
@@ -13,10 +19,9 @@ export function CsvUploadForm({ kind }: { kind: UploadKind }) {
   const [message, setMessage] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
 
-  const isClassrooms = kind === "classrooms";
-  const endpoint = isClassrooms
-    ? "/api/admin/classrooms/csv"
-    : "/api/admin/donations/csv";
+  const endpoint = ENDPOINTS[kind];
+  const buttonLabel =
+    kind === "item-summary" ? "Upload and update total" : "Upload and update tallies";
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -73,7 +78,7 @@ export function CsvUploadForm({ kind }: { kind: UploadKind }) {
         disabled={pending}
         className="rounded-full bg-mint-dark px-5 py-2.5 font-semibold text-white hover:bg-mint-dark/90 disabled:opacity-60"
       >
-        {pending ? "Updating…" : "Upload and update tallies"}
+        {pending ? "Updating…" : buttonLabel}
       </button>
     </form>
   );

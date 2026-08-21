@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { applyDonationCsv } from "@/lib/csv";
+import { applyItemSummaryCsv } from "@/lib/csv";
+import { formatMoney } from "@/lib/format";
 import { requireAdminApi } from "@/lib/session";
 import { updateStore } from "@/lib/store";
 
@@ -20,32 +21,28 @@ export async function POST(request: Request) {
   const csvText = await file.text();
 
   try {
-    let uniqueFamilies = 0;
-    let duplicatesSkipped = 0;
+    let overallRaised = 0;
+    let itemsCounted = 0;
     let warnings: string[] = [];
 
     await updateStore((current) => {
-      const { store, result } = applyDonationCsv(current, csvText);
-      uniqueFamilies = result.uniqueFamilies;
-      duplicatesSkipped = result.duplicatesSkipped;
+      const { store, result } = applyItemSummaryCsv(current, csvText);
+      overallRaised = result.overallRaised;
+      itemsCounted = result.itemsCounted;
       warnings = result.warnings;
       return store;
     });
 
     revalidatePath("/");
     revalidatePath("/admin");
-    const duplicateNote =
-      duplicatesSkipped > 0
-        ? ` Skipped extra scoops for ${duplicatesSkipped} repeat ${duplicatesSkipped === 1 ? "gift" : "gifts"} by the same family in the same classroom.`
-        : "";
     return NextResponse.json({
       ok: true,
-      message: `Updated scoops from ${uniqueFamilies} family donations.${duplicateNote} Individual names were discarded.`,
+      message: `Updated the school total to ${formatMoney(overallRaised)} from ${itemsCounted} item ${itemsCounted === 1 ? "row" : "rows"}. Line items were not saved.`,
       warnings,
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Could not parse donations CSV.";
+      error instanceof Error ? error.message : "Could not parse item summary CSV.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

@@ -1,4 +1,10 @@
-import type { Classroom, ClassroomCsvResult, DonationCsvResult, Store } from "./types";
+import type {
+  Classroom,
+  ClassroomCsvResult,
+  DonationCsvResult,
+  ItemSummaryCsvResult,
+  Store,
+} from "./types";
 
 const CLASSROOM_KEYS = ["classroom", "room", "room_number", "room number", "class"];
 const TEACHER_KEYS = ["teacher", "teacher_name", "teacher name"];
@@ -10,8 +16,8 @@ const STUDENT_COUNT_KEYS = [
   "count",
 ];
 const STUDENT_LIST_KEYS = ["student_list", "students_list", "names", "student names"];
-const DONATION_KEYS = ["donation", "amount", "dollars"];
 const FAMILY_KEYS = ["student", "family", "student_name", "student name", "name", "donor"];
+const NET_AMOUNT_KEYS = ["net amount sold"];
 
 function parseCsvRows(text: string): string[][] {
   const rows: string[][] = [];
@@ -161,7 +167,6 @@ function extractStudentSlots(record: Record<string, string>): StudentSlot[] {
 type DonationEvent = {
   classroomField: string;
   donor: string;
-  amount: number | null;
   rowNumber: number;
 };
 
@@ -170,16 +175,14 @@ function donationEventsFromRow(
   rowNumber: number,
 ): DonationEvent[] {
   const respondent = pick(record, ["respondent", "parent", "guardian"]);
-  const amount = parseMoney(pick(record, DONATION_KEYS));
   const slots = extractStudentSlots(record).filter((student) => student.classroom);
 
   if (slots.length > 0) {
-    return slots.map((student, index) => ({
+    return slots.map((student) => ({
       classroomField: student.classroom,
       donor:
         respondent ||
         [student.first, student.last].filter(Boolean).join(" "),
-      amount: index === 0 ? amount : null,
       rowNumber,
     }));
   }
@@ -188,7 +191,6 @@ function donationEventsFromRow(
     {
       classroomField: pick(record, CLASSROOM_KEYS),
       donor: respondent || pick(record, FAMILY_KEYS),
-      amount,
       rowNumber,
     },
   ];
@@ -267,10 +269,8 @@ export function applyDonationCsv(store: Store, csvText: string): {
   );
   const familiesByRoom = new Map<string, Set<string>>();
   const seenDonorInRoom = new Set<string>();
-  let overallRaised = 0;
   let uniqueFamilies = 0;
   let duplicatesSkipped = 0;
-  let amountsApplied = false;
 
   rows.forEach((row, index) => {
     donationEventsFromRow(row, index + 2).forEach((event) => {
@@ -288,10 +288,6 @@ export function applyDonationCsv(store: Store, csvText: string): {
         );
         return;
       }
-      if (event.amount !== null && event.amount < 0) {
-        warnings.push(`Row ${event.rowNumber}: skipped (invalid donation amount).`);
-        return;
-      }
       if (!donorKey) {
         warnings.push(
           `Row ${event.rowNumber}: skipped (missing respondent or student name).`,
@@ -303,17 +299,13 @@ export function applyDonationCsv(store: Store, csvText: string): {
       const alreadyScooped = seenDonorInRoom.has(identity);
       if (alreadyScooped) {
         duplicatesSkipped += 1;
-      } else {
-        seenDonorInRoom.add(identity);
-        const families = familiesByRoom.get(classroom.roomNumber) ?? new Set<string>();
-        families.add(donorKey);
-        familiesByRoom.set(classroom.roomNumber, families);
+        return;
       }
 
-      if (event.amount !== null) {
-        amountsApplied = true;
-        overallRaised += event.amount;
-      }
+      seenDonorInRoom.add(identity);
+      const families = familiesByRoom.get(classroom.roomNumber) ?? new Set<string>();
+      families.add(donorKey);
+      familiesByRoom.set(classroom.roomNumber, families);
     });
   });
 
@@ -324,22 +316,70 @@ export function applyDonationCsv(store: Store, csvText: string): {
     return { ...classroom, scoops };
   });
 
-  const raised = amountsApplied
-    ? Math.round(overallRaised * 100) / 100
-    : store.overallRaised;
+  return {
+    store: {
+      ...store,
+      classrooms,
+    },
+    result: {
+      classroomsUpdated: familiesByRoom.size,
+      uniqueFamilies,
+      duplicatesSkipped,
+      warnings,
+    },
+  };
+}
 
+export function applyItemSummaryCsv(store: Store, csvText: string): {
+  store: Store;
+  result: ItemSummaryCsvResult;
+} {
+  const rows = rowsToObjects(csvText);
+  if (rows.length === 0) {
+    throw new Error(
+      'No item rows found. Need a Square item summary CSV with a "Net Amount Sold" column.',
+    );
+  }
+
+  const hasNetAmountColumn = NET_AMOUNT_KEYS.some((key) => key in rows[0]);
+  if (!hasNetAmountColumn) {
+    throw new Error(
+      'Need a "Net Amount Sold" column. Export the Square item summary CSV.',
+    );
+  }
+
+  const warnings: string[] = [];
+  let overallRaised = 0;
+  let itemsCounted = 0;
+
+  rows.forEach((row, index) => {
+    const raw = pick(row, NET_AMOUNT_KEYS);
+    if (!raw) {
+      warnings.push(`Row ${index + 2}: skipped (missing Net Amount Sold).`);
+      return;
+    }
+    const amount = parseMoney(raw);
+    if (amount === null || amount < 0) {
+      warnings.push(`Row ${index + 2}: skipped (invalid Net Amount Sold).`);
+      return;
+    }
+    overallRaised += amount;
+    itemsCounted += 1;
+  });
+
+  if (itemsCounted === 0) {
+    throw new Error("No valid Net Amount Sold values found.");
+  }
+
+  const raised = Math.round(overallRaised * 100) / 100;
   return {
     store: {
       ...store,
       overallRaised: raised,
-      classrooms,
     },
     result: {
       overallRaised: raised,
-      classroomsUpdated: familiesByRoom.size,
-      uniqueFamilies,
-      duplicatesSkipped,
-      amountsApplied,
+      itemsCounted,
       warnings,
     },
   };

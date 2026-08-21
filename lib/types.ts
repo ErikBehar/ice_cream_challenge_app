@@ -21,10 +21,14 @@ export type ClassroomCsvResult = {
 };
 
 export type DonationCsvResult = {
-  overallRaised: number;
   classroomsUpdated: number;
   uniqueFamilies: number;
   duplicatesSkipped: number;
-  amountsApplied: boolean;
+  warnings: string[];
+};
+
+export type ItemSummaryCsvResult = {
+  overallRaised: number;
+  itemsCounted: number;
   warnings: string[];
 };

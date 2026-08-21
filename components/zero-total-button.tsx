@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function ClearDonationsButton() {
+export function ZeroTotalButton() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -11,7 +11,7 @@ export function ClearDonationsButton() {
 
   async function onClick() {
     const confirmed = window.confirm(
-      "Clear all donations? Every classroom scoop will go to zero. The school fundraising total and classroom roster will stay.",
+      "Zero the school total? Classroom scoops will stay as they are.",
     );
     if (!confirmed) return;
 
@@ -19,7 +19,7 @@ export function ClearDonationsButton() {
     setError("");
     setMessage("");
     try {
-      const response = await fetch("/api/admin/donations/clear", {
+      const response = await fetch("/api/admin/item-summary/clear", {
         method: "POST",
       });
       const body = (await response.json().catch(() => ({}))) as {
@@ -27,10 +27,10 @@ export function ClearDonationsButton() {
         message?: string;
       };
       if (!response.ok) {
-        setError(body.error || "Could not clear donations.");
+        setError(body.error || "Could not zero the total.");
         return;
       }
-      setMessage(body.message || "Donations cleared.");
+      setMessage(body.message || "School total set to zero.");
       router.refresh();
     } finally {
       setPending(false);
@@ -47,7 +47,7 @@ export function ClearDonationsButton() {
         disabled={pending}
         className="rounded-full bg-strawberry px-5 py-2.5 font-semibold text-white hover:bg-strawberry-dark disabled:opacity-60"
       >
-        {pending ? "Clearing…" : "Clear donations"}
+        {pending ? "Zeroing…" : "Zero total"}
       </button>
     </div>
   );

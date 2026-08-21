@@ -35,11 +35,17 @@ export function createEmptyStore(): Store {
 export function clearDonations(store: Store): Store {
   return {
     ...store,
-    overallRaised: 0,
     classrooms: store.classrooms.map((classroom) => ({
       ...classroom,
       scoops: 0,
     })),
+  };
+}
+
+export function zeroOverallRaised(store: Store): Store {
+  return {
+    ...store,
+    overallRaised: 0,
   };
 }
 

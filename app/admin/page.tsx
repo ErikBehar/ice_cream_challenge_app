@@ -2,6 +2,7 @@ import { AdminSettingsForm } from "@/components/admin-settings-form";
 import { ClearDonationsButton } from "@/components/clear-donations-button";
 import { CsvUploadForm } from "@/components/csv-upload-form";
 import { LogoutButton } from "@/components/logout-button";
+import { ZeroTotalButton } from "@/components/zero-total-button";
 import { readStore } from "@/lib/store";
 import Link from "next/link";
 
@@ -65,15 +66,15 @@ export default async function AdminPage() {
             Accepts a simple donation list or last year’s PTA form export
             (Respondent, Student #1/#2/#3 names and classrooms). Classroom labels
             like “15 - Mtro. Gonzalez (3-SI)” match roster room 15. The same
-            family in the same classroom is still one scoop, but every donation
-            amount on those lines is added to the school-wide total. If dollar
-            amounts are missing, scoops still update and the fundraising total is
-            left as-is. Row-level names are discarded after the tallies are saved.
+            family in the same classroom is still one scoop. Dollar amounts in
+            this file are ignored — use the item summary CSV below for the
+            school-wide total. Row-level names are discarded after the tallies
+            are saved.
           </p>
           <p className="mb-4 rounded-xl bg-cream px-3 py-2 font-mono text-xs text-chocolate/80">
-            classroom,donation,student
+            classroom,student
             <br />
-            12,25.00,Jane Doe
+            12,Jane Doe
             <br />
             <br />
             or Respondent + Student #1: Classroom, Student #1: First Name, …
@@ -81,10 +82,32 @@ export default async function AdminPage() {
           <CsvUploadForm kind="donations" />
           <div className="mt-6 border-t border-cream-dark pt-5">
             <p className="mb-3 text-sm text-chocolate/70">
-              Reset the school total and every classroom scoop to zero. The roster
-              and campaign settings stay in place.
+              Reset every classroom scoop to zero. The school fundraising total,
+              roster, and campaign settings stay in place.
             </p>
             <ClearDonationsButton />
+          </div>
+        </section>
+
+        <section className="rounded-3xl bg-white p-6 shadow-md ring-1 ring-cream-dark">
+          <h2 className="font-display text-xl text-chocolate">Item summary CSV</h2>
+          <p className="mt-1 mb-3 text-sm text-chocolate/70">
+            Replaces the school-wide fundraising total with the sum of the
+            Net Amount Sold column from a Square item summary export. Line items
+            are not saved.
+          </p>
+          <p className="mb-4 rounded-xl bg-cream px-3 py-2 font-mono text-xs text-chocolate/80">
+            Item Name,…,Net Amount Sold
+            <br />
+            Single Scoop,…,&quot;$47,600.00&quot;
+          </p>
+          <CsvUploadForm kind="item-summary" />
+          <div className="mt-6 border-t border-cream-dark pt-5">
+            <p className="mb-3 text-sm text-chocolate/70">
+              Set the school-wide fundraising total to zero. Classroom scoops stay
+              as they are.
+            </p>
+            <ZeroTotalButton />
           </div>
         </section>
       </div>

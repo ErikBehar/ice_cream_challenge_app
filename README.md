@@ -27,7 +27,7 @@ The site keeps only tallies:
 - donation site URL
 - last-updated timestamp
 
-Student names, family names, and individual donation amounts are never written to disk after a CSV is processed.
+Student names, family names, and individual donation amounts are never written to disk after a CSV is processed. The Square item summary is summed and discarded; only the school-wide total is kept.
 
 ## Admin CSV formats
 
@@ -38,14 +38,21 @@ classroom,teacher,students
 12,Ms. Smith,24
 ```
 
-Donations (`examples/donations.csv` or last year’s PTA form export):
+Donations (`examples/donations.csv` or last year’s PTA form export) update classroom scoops only:
 
 ```csv
-classroom,donation,student
-12,25.00,Jane Doe
+classroom,student
+12,Jane Doe
 ```
 
-The same family in the same classroom is one scoop. Repeat gifts still add to the dollar total when amounts are present.
+The same family in the same classroom is one scoop. Dollar amounts in this file are ignored.
+
+Item summary (`examples/item-summary.csv`, Square export) sets the school-wide dollar total from **Net Amount Sold**:
+
+```csv
+Item Name,Variation,Price,Quantity Sold,Quantity Refunded,Amount Sold,Refunded Amount,Net Amount Sold
+Single Scoop (PER CHILD Suggested Donation),,$350.00,10,,"$3,500.00",$0.00,"$3,500.00"
+```
 
 ## Railway
 
@@ -59,7 +66,7 @@ The app is a single Node web service. Tally data is a JSON file, so it needs a *
      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 4. Add a **Volume** to the service. Mount path `/data` is fine. Railway sets `RAILWAY_VOLUME_MOUNT_PATH`; the app writes `store.json` there. Do not skip this or CSV/goal updates disappear on the next deploy.
 5. Under **Settings → Networking**, generate a public domain (or attach a custom one). HTTPS is provided on `*.up.railway.app`.
-6. After the first deploy, open `/admin`, log in, set the page title, donation URL, and goals, then upload the classroom roster and donations CSVs.
+6. After the first deploy, open `/admin`, log in, set the page title, donation URL, and goals, then upload the classroom roster, donations, and item summary CSVs.
 
 Build is `npm run build`. Start is `npm run start` (`next start --hostname 0.0.0.0`). Railway injects `PORT`.
 
