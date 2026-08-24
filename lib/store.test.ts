@@ -61,12 +61,20 @@ describe("lastUpdated", { concurrency: 1 }, () => {
     assert.equal((await readStore()).lastUpdated, afterSettings.lastUpdated);
 
     await tick();
+    const afterPosterOff = await updateStore((current) => ({
+      ...current,
+      showIceCreamPoster: false,
+    }));
+    assertFresh(afterPosterOff.lastUpdated, afterSettings.lastUpdated);
+    assert.equal((await readStore()).showIceCreamPoster, false);
+
+    await tick();
     const afterRoster = await updateStore(
       (current) =>
         applyClassroomCsv(current, "classroom,teacher,students\n12,Ms. Smith,24\n")
           .store,
     );
-    assertFresh(afterRoster.lastUpdated, afterSettings.lastUpdated);
+    assertFresh(afterRoster.lastUpdated, afterPosterOff.lastUpdated);
     assert.equal(await persistedLastUpdated(), afterRoster.lastUpdated);
 
     await tick();
@@ -96,5 +104,18 @@ describe("lastUpdated", { concurrency: 1 }, () => {
     );
     assert.equal((await readStore()).lastUpdated, before.lastUpdated);
     assert.equal(await persistedLastUpdated(), before.lastUpdated);
+  });
+
+  test("a store without showIceCreamPoster still loads with the cone on", async () => {
+    const current = await readStore();
+    const legacy = { ...current };
+    delete (legacy as { showIceCreamPoster?: boolean }).showIceCreamPoster;
+    await writeFile(
+      path.join(dataDir, "store.json"),
+      `${JSON.stringify(legacy, null, 2)}\n`,
+      "utf8",
+    );
+    const loaded = await readStore();
+    assert.equal(loaded.showIceCreamPoster, true);
   });
 });

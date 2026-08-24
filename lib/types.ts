@@ -12,6 +12,7 @@ export type Store = {
   overallRaised: number;
   classroomPercentTarget: number;
   donationUrl: string;
+  showIceCreamPoster: boolean;
   classrooms: Classroom[];
 };
 

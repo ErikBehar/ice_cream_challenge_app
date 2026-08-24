@@ -6,14 +6,17 @@ import {
   meterFillPercent,
 } from "@/lib/tallies";
 import { GoalCelebration } from "./goal-celebration";
+import { IceCreamGoalPoster } from "./ice-cream-goal-poster";
 import { IceCreamMark, StarMark } from "./icons";
 
 export function CampaignCard({
   overallGoal,
   overallRaised,
+  showIceCreamPoster,
 }: {
   overallGoal: number;
   overallRaised: number;
+  showIceCreamPoster: boolean;
 }) {
   const percent = fundingPercent(overallRaised, overallGoal);
   const fill = meterFillPercent(percent);
@@ -89,6 +92,9 @@ export function CampaignCard({
           />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_40%,rgba(255,255,255,0.45),transparent_45%)]" />
         </div>
+        {showIceCreamPoster ? (
+          <IceCreamGoalPoster overallRaised={overallRaised} />
+        ) : null}
         <p className="text-sm text-chocolate/65">
           {exceeded
             ? `The sundae overflowed — ${formatMoney(overBy)} past the goal. Extra scoops welcome!`

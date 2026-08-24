@@ -8,6 +8,10 @@ import { updateStore } from "@/lib/store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function parseBooleanFlag(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
 export async function POST(request: Request) {
   const unauthorized = await requireAdminApi();
   if (unauthorized) return unauthorized;
@@ -17,12 +21,14 @@ export async function POST(request: Request) {
     overallGoal?: unknown;
     classroomPercentTarget?: unknown;
     donationUrl?: unknown;
+    showIceCreamPoster?: unknown;
   } | null;
 
   const pageTitle = parsePageTitle(body?.pageTitle);
   const overallGoal = Number(body?.overallGoal);
   const classroomPercentTarget = Number(body?.classroomPercentTarget);
   const donationUrl = parseDonationUrl(body?.donationUrl);
+  const showIceCreamPoster = parseBooleanFlag(body?.showIceCreamPoster);
 
   if (pageTitle === null) {
     return NextResponse.json(
@@ -54,6 +60,12 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (showIceCreamPoster === null) {
+    return NextResponse.json(
+      { error: "Ice cream cone display must be on or off." },
+      { status: 400 },
+    );
+  }
 
   const store = await updateStore((current) => ({
     ...current,
@@ -61,6 +73,7 @@ export async function POST(request: Request) {
     overallGoal,
     classroomPercentTarget,
     donationUrl,
+    showIceCreamPoster,
   }));
 
   revalidatePath("/");

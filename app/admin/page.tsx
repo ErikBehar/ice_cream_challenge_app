@@ -46,6 +46,7 @@ export default async function AdminPage() {
             overallGoal={store.overallGoal}
             classroomPercentTarget={store.classroomPercentTarget}
             donationUrl={store.donationUrl}
+            showIceCreamPoster={store.showIceCreamPoster}
           />
         </section>
 

@@ -8,6 +8,7 @@ export const DEFAULT_STORE: Store = {
   overallRaised: 8420,
   classroomPercentTarget: 80,
   donationUrl: "",
+  showIceCreamPoster: true,
   classrooms: [
     { roomNumber: "1", teacherName: "Ms. Patel", studentCount: 22, scoops: 18 },
     { roomNumber: "2", teacherName: "Mr. Chen", studentCount: 24, scoops: 20 },
@@ -28,6 +29,7 @@ export function createEmptyStore(): Store {
     overallRaised: 0,
     classroomPercentTarget: 80,
     donationUrl: "",
+    showIceCreamPoster: true,
     classrooms: [],
   };
 }

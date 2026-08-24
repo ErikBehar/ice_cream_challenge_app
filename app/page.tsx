@@ -23,6 +23,7 @@ export default async function Home() {
         <CampaignCard
           overallGoal={store.overallGoal}
           overallRaised={store.overallRaised}
+          showIceCreamPoster={store.showIceCreamPoster}
         />
         <ClassroomBoard
           classrooms={store.classrooms}

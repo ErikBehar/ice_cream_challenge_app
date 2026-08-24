@@ -9,17 +9,20 @@ export function AdminSettingsForm({
   overallGoal,
   classroomPercentTarget,
   donationUrl,
+  showIceCreamPoster,
 }: {
   pageTitle: string;
   overallGoal: number;
   classroomPercentTarget: number;
   donationUrl: string;
+  showIceCreamPoster: boolean;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(pageTitle);
   const [goal, setGoal] = useState(String(overallGoal));
   const [percent, setPercent] = useState(String(classroomPercentTarget));
   const [donateLink, setDonateLink] = useState(donationUrl);
+  const [showPoster, setShowPoster] = useState(showIceCreamPoster);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -38,6 +41,7 @@ export function AdminSettingsForm({
           overallGoal: Number(goal),
           classroomPercentTarget: Number(percent),
           donationUrl: donateLink,
+          showIceCreamPoster: showPoster,
         }),
       });
       const body = (await response.json().catch(() => ({}))) as { error?: string };
@@ -116,6 +120,23 @@ export function AdminSettingsForm({
         <span className="mt-1 block text-xs text-chocolate/60">
           Shown as the “Click here to Donate!” sticker in the public header.
           Leave blank to hide the sticker.
+        </span>
+      </label>
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-cream-dark bg-cream/50 px-3 py-3">
+        <input
+          type="checkbox"
+          checked={showPoster}
+          onChange={(event) => setShowPoster(event.target.checked)}
+          className="mt-1 h-4 w-4 accent-strawberry"
+        />
+        <span>
+          <span className="block text-sm font-semibold text-chocolate">
+            Show ice cream cone tracker
+          </span>
+          <span className="mt-1 block text-xs text-chocolate/60">
+            Adds the Escondido cone under the fundraising progress bar. Each
+            scoop fills at $5,000. Turn this off to keep only the bar.
+          </span>
         </span>
       </label>
       {error ? <p className="text-sm font-medium text-strawberry-dark">{error}</p> : null}

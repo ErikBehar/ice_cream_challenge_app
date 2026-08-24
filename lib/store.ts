@@ -37,6 +37,8 @@ function isStore(value: unknown): value is Store {
     typeof store.classroomPercentTarget === "number" &&
     (store.pageTitle === undefined || typeof store.pageTitle === "string") &&
     (store.donationUrl === undefined || typeof store.donationUrl === "string") &&
+    (store.showIceCreamPoster === undefined ||
+      typeof store.showIceCreamPoster === "boolean") &&
     Array.isArray(store.classrooms) &&
     store.classrooms.every(isClassroom)
   );
@@ -48,6 +50,7 @@ function withDefaults(store: Store): Store {
     ...store,
     pageTitle,
     donationUrl: store.donationUrl ?? "",
+    showIceCreamPoster: store.showIceCreamPoster ?? true,
   };
 }
 
