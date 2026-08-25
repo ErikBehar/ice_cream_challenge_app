@@ -45,7 +45,21 @@ classroom,student
 12,Jane Doe
 ```
 
-The same family in the same classroom is one scoop. Dollar amounts in this file are ignored.
+The same family in the same classroom is one scoop. Dollar amounts in this file are ignored — use the item summary CSV below for the school-wide total.
+
+## Live CheddarUp updates (Zapier)
+
+In addition to the donations CSV, Zapier can POST one purchase at a time to:
+
+`https://YOUR-SERVICE.up.railway.app/update`
+
+Send JSON with the same fields as the donations CSV (simple `classroom` + `student`, or CheddarUp form columns such as `Respondent` and `Student #1: Classroom`). Each new family in a classroom adds one scoop. Repeat gifts by the same family in the same classroom are skipped. A later donations CSV upload still replaces classroom scoops from the full export.
+
+Protect the URL with `UPDATE_SECRET` (or `ADMIN_PASSWORD` if `UPDATE_SECRET` is unset). Zapier should send one of:
+
+- Header `X-Update-Secret: your-secret`
+- Header `Authorization: Bearer your-secret`
+- Query `?secret=your-secret`
 
 Item summary (`examples/item-summary.csv`, Square export) sets the school-wide dollar total from **Net Amount Sold**:
 
@@ -64,6 +78,7 @@ The app is a single Node web service. Tally data is a JSON file, so it needs a *
    - `ADMIN_PASSWORD` — the admin login password
    - `SESSION_SECRET` — a long random string, for example:
      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+   - `UPDATE_SECRET` — optional shared secret for Zapier `POST /update`. If unset, that endpoint accepts `ADMIN_PASSWORD` instead.
 4. Add a **Volume** to the service. Mount path `/data` is fine. Railway sets `RAILWAY_VOLUME_MOUNT_PATH`; the app writes `store.json` there. Do not skip this or CSV/goal updates disappear on the next deploy.
 5. Under **Settings → Networking**, generate a public domain (or attach a custom one). HTTPS is provided on `*.up.railway.app`.
 6. After the first deploy, open `/admin`, log in, set the page title, donation URL, and goals, then upload the classroom roster, donations, and item summary CSVs.

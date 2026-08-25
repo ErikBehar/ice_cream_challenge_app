@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type {
   Classroom,
   ClassroomCsvResult,
@@ -17,7 +18,22 @@ const STUDENT_COUNT_KEYS = [
 ];
 const STUDENT_LIST_KEYS = ["student_list", "students_list", "names", "student names"];
 const FAMILY_KEYS = ["student", "family", "student_name", "student name", "name", "donor"];
+const RESPONDENT_KEYS = [
+  "respondent",
+  "parent",
+  "guardian",
+  "payer",
+  "payer_name",
+  "payer name",
+  "customer",
+  "customer_name",
+  "customer name",
+  "buyer",
+  "buyer_name",
+  "buyer name",
+];
 const NET_AMOUNT_KEYS = ["net amount sold"];
+const JSON_ROW_ARRAY_KEYS = ["rows", "purchases", "records"];
 
 function parseCsvRows(text: string): string[][] {
   const rows: string[][] = [];
@@ -170,11 +186,15 @@ type DonationEvent = {
   rowNumber: number;
 };
 
+function donorHash(roomNumber: string, donorKey: string): string {
+  return createHash("sha256").update(`${roomNumber}\0${donorKey}`).digest("hex");
+}
+
 function donationEventsFromRow(
   record: Record<string, string>,
   rowNumber: number,
 ): DonationEvent[] {
-  const respondent = pick(record, ["respondent", "parent", "guardian"]);
+  const respondent = pick(record, RESPONDENT_KEYS);
   const slots = extractStudentSlots(record).filter((student) => student.classroom);
 
   if (slots.length > 0) {
@@ -258,22 +278,46 @@ export function applyDonationCsv(store: Store, csvText: string): {
   store: Store;
   result: DonationCsvResult;
 } {
+  return applyDonationRecords(store, rowsToObjects(csvText), { replace: true });
+}
+
+export function applyDonationJson(store: Store, body: unknown): {
+  store: Store;
+  result: DonationCsvResult;
+} {
+  const records = jsonBodyToRecords(body);
+  if (records.length === 0) {
+    throw new Error(
+      "No purchase rows found in JSON. Send a CheddarUp row with classroom and respondent or student name.",
+    );
+  }
+  return applyDonationRecords(store, records, { replace: false });
+}
+
+export function applyDonationRecords(
+  store: Store,
+  rows: Record<string, string>[],
+  options: { replace: boolean },
+): {
+  store: Store;
+  result: DonationCsvResult;
+} {
   if (store.classrooms.length === 0) {
     throw new Error("Upload a classroom roster first.");
   }
 
-  const rows = rowsToObjects(csvText);
   const warnings: string[] = [];
   const rosterByKey = new Map(
     store.classrooms.map((classroom) => [roomMatchKey(classroom.roomNumber), classroom]),
   );
   const familiesByRoom = new Map<string, Set<string>>();
-  const seenDonorInRoom = new Set<string>();
+  const seenHashes = new Set(options.replace ? [] : (store.seenDonors ?? []));
+  const batchIdentities = new Set<string>();
   let uniqueFamilies = 0;
   let duplicatesSkipped = 0;
 
   rows.forEach((row, index) => {
-    donationEventsFromRow(row, index + 2).forEach((event) => {
+    donationEventsFromRow(row, index + (options.replace ? 2 : 1)).forEach((event) => {
       const donorKey = normalizeDonorName(event.donor);
       const roomKey = event.classroomField ? roomMatchKey(event.classroomField) : "";
       const classroom = roomKey ? rosterByKey.get(roomKey) : undefined;
@@ -296,13 +340,16 @@ export function applyDonationCsv(store: Store, csvText: string): {
       }
 
       const identity = `${classroom.roomNumber}\0${donorKey}`;
-      const alreadyScooped = seenDonorInRoom.has(identity);
+      const hash = donorHash(classroom.roomNumber, donorKey);
+      const alreadyScooped =
+        batchIdentities.has(identity) || (!options.replace && seenHashes.has(hash));
       if (alreadyScooped) {
         duplicatesSkipped += 1;
         return;
       }
 
-      seenDonorInRoom.add(identity);
+      batchIdentities.add(identity);
+      seenHashes.add(hash);
       const families = familiesByRoom.get(classroom.roomNumber) ?? new Set<string>();
       families.add(donorKey);
       familiesByRoom.set(classroom.roomNumber, families);
@@ -311,15 +358,21 @@ export function applyDonationCsv(store: Store, csvText: string): {
 
   const classrooms = store.classrooms.map((classroom) => {
     const families = familiesByRoom.get(classroom.roomNumber);
-    const scoops = families ? families.size : 0;
-    if (families) uniqueFamilies += families.size;
-    return { ...classroom, scoops };
+    if (options.replace) {
+      const scoops = families ? families.size : 0;
+      if (families) uniqueFamilies += families.size;
+      return { ...classroom, scoops };
+    }
+    if (!families) return classroom;
+    uniqueFamilies += families.size;
+    return { ...classroom, scoops: classroom.scoops + families.size };
   });
 
   return {
     store: {
       ...store,
       classrooms,
+      seenDonors: [...seenHashes],
     },
     result: {
       classroomsUpdated: familiesByRoom.size,
@@ -328,6 +381,101 @@ export function applyDonationCsv(store: Store, csvText: string): {
       warnings,
     },
   };
+}
+
+function isPrimitive(value: unknown): value is string | number | boolean {
+  return (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  );
+}
+
+function questionLabel(record: Record<string, unknown>): string {
+  for (const key of ["question", "name", "label", "key", "title"]) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value;
+  }
+  return "";
+}
+
+function questionAnswer(record: Record<string, unknown>): unknown {
+  for (const key of ["answer", "value", "text", "response", "val"]) {
+    if (key in record) return record[key];
+  }
+  return undefined;
+}
+
+function flattenToRecord(
+  value: unknown,
+  into: Record<string, string> = {},
+  prefix = "",
+  depth = 0,
+): Record<string, string> {
+  if (value == null || depth > 4) return into;
+
+  if (isPrimitive(value)) {
+    if (prefix) into[normalizeHeader(prefix)] = String(value).trim();
+    return into;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (item && typeof item === "object" && !Array.isArray(item)) {
+        const record = item as Record<string, unknown>;
+        const label = questionLabel(record);
+        const answer = questionAnswer(record);
+        if (label && isPrimitive(answer)) {
+          into[normalizeHeader(label)] = String(answer).trim();
+          continue;
+        }
+      }
+      flattenToRecord(item, into, prefix, depth + 1);
+    }
+    return into;
+  }
+
+  if (typeof value !== "object") return into;
+
+  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+    const nextPrefix = prefix ? `${prefix} ${key}` : key;
+    if (isPrimitive(nested)) {
+      const header = normalizeHeader(key);
+      if (!(header in into)) into[header] = String(nested).trim();
+      if (prefix) into[normalizeHeader(nextPrefix)] = String(nested).trim();
+      continue;
+    }
+    flattenToRecord(nested, into, nextPrefix, depth + 1);
+  }
+  return into;
+}
+
+export function jsonBodyToRecords(body: unknown): Record<string, string>[] {
+  if (body == null) return [];
+  if (typeof body === "string") {
+    const trimmed = body.trim();
+    if (!trimmed) return [];
+    try {
+      return jsonBodyToRecords(JSON.parse(trimmed));
+    } catch {
+      return [];
+    }
+  }
+  if (Array.isArray(body)) {
+    return body.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const record = flattenToRecord(item);
+      return Object.keys(record).length > 0 ? [record] : [];
+    });
+  }
+  if (typeof body !== "object") return [];
+
+  const obj = body as Record<string, unknown>;
+  for (const key of JSON_ROW_ARRAY_KEYS) {
+    if (Array.isArray(obj[key])) return jsonBodyToRecords(obj[key]);
+  }
+  const record = flattenToRecord(obj);
+  return Object.keys(record).length > 0 ? [record] : [];
 }
 
 export function applyItemSummaryCsv(store: Store, csvText: string): {

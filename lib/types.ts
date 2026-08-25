@@ -14,6 +14,8 @@ export type Store = {
   donationUrl: string;
   showIceCreamPoster: boolean;
   classrooms: Classroom[];
+  /** Opaque hashes of family+classroom pairs already counted as a scoop. */
+  seenDonors: string[];
 };
 
 export type ClassroomCsvResult = {

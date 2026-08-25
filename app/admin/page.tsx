@@ -74,7 +74,9 @@ export default async function AdminPage() {
             family in the same classroom is still one scoop. Dollar amounts in
             this file are ignored — use the item summary CSV below for the
             school-wide total. Row-level names are discarded after the tallies
-            are saved.
+            are saved. Live CheddarUp purchases can also POST the same fields as
+            JSON to <span className="font-mono">/update</span>; a later CSV
+            upload still replaces scoops from the full export.
           </p>
           <p className="mb-4 rounded-xl bg-cream px-3 py-2 font-mono text-xs text-chocolate/80">
             classroom,student

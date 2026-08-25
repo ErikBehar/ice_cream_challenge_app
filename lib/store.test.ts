@@ -118,4 +118,17 @@ describe("lastUpdated", { concurrency: 1 }, () => {
     const loaded = await readStore();
     assert.equal(loaded.showIceCreamPoster, true);
   });
+
+  test("a store without seenDonors still loads an empty duplicate list", async () => {
+    const current = await readStore();
+    const legacy = { ...current };
+    delete (legacy as { seenDonors?: string[] }).seenDonors;
+    await writeFile(
+      path.join(dataDir, "store.json"),
+      `${JSON.stringify(legacy, null, 2)}\n`,
+      "utf8",
+    );
+    const loaded = await readStore();
+    assert.deepEqual(loaded.seenDonors, []);
+  });
 });

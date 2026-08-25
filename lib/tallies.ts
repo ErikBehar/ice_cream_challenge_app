@@ -9,6 +9,7 @@ export const DEFAULT_STORE: Store = {
   classroomPercentTarget: 80,
   donationUrl: "",
   showIceCreamPoster: true,
+  seenDonors: [],
   classrooms: [
     { roomNumber: "1", teacherName: "Ms. Patel", studentCount: 22, scoops: 18 },
     { roomNumber: "2", teacherName: "Mr. Chen", studentCount: 24, scoops: 20 },
@@ -30,6 +31,7 @@ export function createEmptyStore(): Store {
     classroomPercentTarget: 80,
     donationUrl: "",
     showIceCreamPoster: true,
+    seenDonors: [],
     classrooms: [],
   };
 }
@@ -37,6 +39,7 @@ export function createEmptyStore(): Store {
 export function clearDonations(store: Store): Store {
   return {
     ...store,
+    seenDonors: [],
     classrooms: store.classrooms.map((classroom) => ({
       ...classroom,
       scoops: 0,
