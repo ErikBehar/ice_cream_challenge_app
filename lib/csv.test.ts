@@ -4,6 +4,8 @@ import {
   applyClassroomCsv,
   applyDonationCsv,
   applyDonationJson,
+  applyItemSummaryCsv,
+  applyPaymentJson,
   jsonBodyToRecords,
 } from "./csv";
 import { createEmptyStore } from "./tallies";
@@ -223,5 +225,49 @@ describe("applyDonationCsv", () => {
     assert.equal(scoops(next, "15"), 1);
     assert.equal(scoops(next, "2"), 1);
     assert.equal(scoops(next, "16"), 1);
+  });
+});
+
+describe("applyPaymentJson", () => {
+  test("adds total to the school fundraising amount", () => {
+    const store = { ...createEmptyStore(), overallRaised: 100 };
+    const { store: next, result } = applyPaymentJson(store, { total: 25.5 });
+    assert.equal(result.amountAdded, 25.5);
+    assert.equal(result.duplicate, false);
+    assert.equal(next.overallRaised, 125.5);
+    assert.equal(next.classrooms.length, store.classrooms.length);
+  });
+
+  test("reads a dollar-string total", () => {
+    const { result } = applyPaymentJson(createEmptyStore(), {
+      total: "$1,250.00",
+    });
+    assert.equal(result.amountAdded, 1250);
+    assert.equal(result.overallRaised, 1250);
+  });
+
+  test("skips a repeat payment id", () => {
+    const first = applyPaymentJson(createEmptyStore(), {
+      id: 16907482,
+      total: 40,
+    });
+    const second = applyPaymentJson(first.store, {
+      payment_id: 16907482,
+      total: 40,
+    });
+    assert.equal(second.result.duplicate, true);
+    assert.equal(second.result.amountAdded, 0);
+    assert.equal(second.store.overallRaised, 40);
+  });
+
+  test("a later item summary CSV replaces the live total", () => {
+    let store = applyPaymentJson(createEmptyStore(), { total: 40 }).store;
+    assert.equal(store.overallRaised, 40);
+    store = applyItemSummaryCsv(
+      store,
+      "Item Name,Net Amount Sold\nScoop,$10.00\n",
+    ).store;
+    assert.equal(store.overallRaised, 10);
+    assert.deepEqual(store.seenPayments, []);
   });
 });

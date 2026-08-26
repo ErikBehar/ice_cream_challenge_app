@@ -4,6 +4,7 @@ import type {
   ClassroomCsvResult,
   DonationCsvResult,
   ItemSummaryCsvResult,
+  PaymentJsonResult,
   Store,
 } from "./types";
 
@@ -34,6 +35,13 @@ const RESPONDENT_KEYS = [
 ];
 const NET_AMOUNT_KEYS = ["net amount sold"];
 const JSON_ROW_ARRAY_KEYS = ["rows", "purchases", "records"];
+const PAYMENT_ID_KEYS = [
+  "payment_id",
+  "payment id",
+  "id",
+  "document number",
+  "document_number",
+];
 
 function parseCsvRows(text: string): string[][] {
   const rows: string[][] = [];
@@ -639,11 +647,88 @@ export function applyItemSummaryCsv(store: Store, csvText: string): {
     store: {
       ...store,
       overallRaised: raised,
+      seenPayments: [],
     },
     result: {
       overallRaised: raised,
       itemsCounted,
       warnings,
+    },
+  };
+}
+
+function coerceMoney(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") return parseMoney(value);
+  return null;
+}
+
+function paymentTotalFromBody(body: unknown): number | null {
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    const record = body as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      if (normalizeHeader(key) === "total") {
+        const amount = coerceMoney(record[key]);
+        if (amount !== null) return amount;
+      }
+    }
+  }
+  const [row] = jsonBodyToRecords(body);
+  if (!row) return null;
+  return parseMoney(row.total ?? "");
+}
+
+function paymentIdFromBody(body: unknown): string {
+  const [row] = jsonBodyToRecords(body);
+  if (!row) return "";
+  return pick(row, PAYMENT_ID_KEYS);
+}
+
+function paymentIdHash(paymentId: string): string {
+  return createHash("sha256").update(paymentId).digest("hex");
+}
+
+export function applyPaymentJson(
+  store: Store,
+  body: unknown,
+): {
+  store: Store;
+  result: PaymentJsonResult;
+} {
+  const amount = paymentTotalFromBody(body);
+  if (amount === null) {
+    throw new Error('JSON needs a "total" field with the payment amount.');
+  }
+  if (amount < 0) {
+    throw new Error("total must be 0 or greater.");
+  }
+
+  const paymentId = paymentIdFromBody(body);
+  const hash = paymentId ? paymentIdHash(paymentId) : "";
+  const seen = new Set(store.seenPayments ?? []);
+  if (hash && seen.has(hash)) {
+    return {
+      store,
+      result: {
+        overallRaised: store.overallRaised,
+        amountAdded: 0,
+        duplicate: true,
+      },
+    };
+  }
+
+  const overallRaised = Math.round((store.overallRaised + amount) * 100) / 100;
+  if (hash) seen.add(hash);
+  return {
+    store: {
+      ...store,
+      overallRaised,
+      seenPayments: [...seen],
+    },
+    result: {
+      overallRaised,
+      amountAdded: amount,
+      duplicate: false,
     },
   };
 }

@@ -131,4 +131,17 @@ describe("lastUpdated", { concurrency: 1 }, () => {
     const loaded = await readStore();
     assert.deepEqual(loaded.seenDonors, []);
   });
+
+  test("a store without seenPayments still loads an empty payment list", async () => {
+    const current = await readStore();
+    const legacy = { ...current };
+    delete (legacy as { seenPayments?: string[] }).seenPayments;
+    await writeFile(
+      path.join(dataDir, "store.json"),
+      `${JSON.stringify(legacy, null, 2)}\n`,
+      "utf8",
+    );
+    const loaded = await readStore();
+    assert.deepEqual(loaded.seenPayments, []);
+  });
 });

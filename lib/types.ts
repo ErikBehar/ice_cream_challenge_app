@@ -16,6 +16,8 @@ export type Store = {
   classrooms: Classroom[];
   /** Opaque hashes of family+classroom pairs already counted as a scoop. */
   seenDonors: string[];
+  /** Opaque hashes of payment ids already added to the school total. */
+  seenPayments: string[];
 };
 
 export type ClassroomCsvResult = {
@@ -34,4 +36,10 @@ export type ItemSummaryCsvResult = {
   overallRaised: number;
   itemsCounted: number;
   warnings: string[];
+};
+
+export type PaymentJsonResult = {
+  overallRaised: number;
+  amountAdded: number;
+  duplicate: boolean;
 };

@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 
 export function updateSecret(): string {
@@ -42,4 +43,41 @@ export function providedUpdateSecret(request: Request, body: unknown): string {
     }
   }
   return "";
+}
+
+export async function readAuthorizedJson(
+  request: Request,
+  emptyError: string,
+): Promise<
+  { ok: true; body: unknown } | { ok: false; response: NextResponse }
+> {
+  if (!updateSecret()) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error:
+            "Live updates are not configured. Set UPDATE_SECRET (or ADMIN_PASSWORD) on the server.",
+        },
+        { status: 503 },
+      ),
+    };
+  }
+
+  const body = await request.json().catch(() => null);
+  if (body == null) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: emptyError }, { status: 400 }),
+    };
+  }
+
+  if (!verifyUpdateSecret(providedUpdateSecret(request, body))) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  return { ok: true, body };
 }

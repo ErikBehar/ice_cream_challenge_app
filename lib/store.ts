@@ -42,6 +42,9 @@ function isStore(value: unknown): value is Store {
     (store.seenDonors === undefined ||
       (Array.isArray(store.seenDonors) &&
         store.seenDonors.every((value) => typeof value === "string"))) &&
+    (store.seenPayments === undefined ||
+      (Array.isArray(store.seenPayments) &&
+        store.seenPayments.every((value) => typeof value === "string"))) &&
     Array.isArray(store.classrooms) &&
     store.classrooms.every(isClassroom)
   );
@@ -55,6 +58,7 @@ function withDefaults(store: Store): Store {
     donationUrl: store.donationUrl ?? "",
     showIceCreamPoster: store.showIceCreamPoster ?? true,
     seenDonors: store.seenDonors ?? [],
+    seenPayments: store.seenPayments ?? [],
   };
 }
 

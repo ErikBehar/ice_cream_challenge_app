@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { applyDonationJson } from "@/lib/csv";
 import { updateStore } from "@/lib/store";
-import {
-  providedUpdateSecret,
-  updateSecret,
-  verifyUpdateSecret,
-} from "@/lib/update-auth";
+import { readAuthorizedJson } from "@/lib/update-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,27 +16,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!updateSecret()) {
-    return NextResponse.json(
-      {
-        error:
-          "Live updates are not configured. Set UPDATE_SECRET (or ADMIN_PASSWORD) on the server.",
-      },
-      { status: 503 },
-    );
-  }
-
-  const body = await request.json().catch(() => null);
-  if (body == null) {
-    return NextResponse.json(
-      { error: "Send a JSON purchase row, similar to the donations CSV." },
-      { status: 400 },
-    );
-  }
-
-  if (!verifyUpdateSecret(providedUpdateSecret(request, body))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authorized = await readAuthorizedJson(
+    request,
+    "Send a JSON purchase row, similar to the donations CSV.",
+  );
+  if (!authorized.ok) return authorized.response;
 
   try {
     let uniqueFamilies = 0;
@@ -48,7 +28,7 @@ export async function POST(request: Request) {
     let warnings: string[] = [];
 
     await updateStore((current) => {
-      const { store, result } = applyDonationJson(current, body);
+      const { store, result } = applyDonationJson(current, authorized.body);
       uniqueFamilies = result.uniqueFamilies;
       duplicatesSkipped = result.duplicatesSkipped;
       warnings = result.warnings;

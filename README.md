@@ -61,6 +61,14 @@ Protect the URL with `UPDATE_SECRET` (or `ADMIN_PASSWORD` if `UPDATE_SECRET` is 
 - Header `Authorization: Bearer your-secret`
 - Query `?secret=your-secret`
 
+To add a payment amount to the school fundraising total, POST to `/update_payment` with the same secret and a JSON `total`:
+
+```json
+{ "id": 16907482, "total": 40 }
+```
+
+or `{ "total": "$40.00" }`. That **adds** this payment to the current total. Repeat posts of the same payment `id` / `payment_id` are skipped. A later item summary CSV upload still **replaces** the school total from the Square export.
+
 Item summary (`examples/item-summary.csv`, Square export) sets the school-wide dollar total from **Net Amount Sold**:
 
 ```csv
@@ -78,7 +86,7 @@ The app is a single Node web service. Tally data is a JSON file, so it needs a *
    - `ADMIN_PASSWORD` — the admin login password
    - `SESSION_SECRET` — a long random string, for example:
      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
-   - `UPDATE_SECRET` — optional shared secret for Zapier `POST /update`. If unset, that endpoint accepts `ADMIN_PASSWORD` instead.
+   - `UPDATE_SECRET` — optional shared secret for Zapier `POST /update` and `POST /update_payment`. If unset, those endpoints accept `ADMIN_PASSWORD` instead.
 4. Add a **Volume** to the service. Mount path `/data` is fine. Railway sets `RAILWAY_VOLUME_MOUNT_PATH`; the app writes `store.json` there. Do not skip this or CSV/goal updates disappear on the next deploy.
 5. Under **Settings → Networking**, generate a public domain (or attach a custom one). HTTPS is provided on `*.up.railway.app`.
 6. After the first deploy, open `/admin`, log in, set the page title, donation URL, and goals, then upload the classroom roster, donations, and item summary CSVs.

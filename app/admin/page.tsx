@@ -101,7 +101,10 @@ export default async function AdminPage() {
           <p className="mt-1 mb-3 text-sm text-chocolate/70">
             Replaces the school-wide fundraising total with the sum of the
             Net Amount Sold column from a Square item summary export. Line items
-            are not saved.
+            are not saved. Live CheddarUp payments can also POST JSON with a
+            <span className="font-mono">total</span> field to{" "}
+            <span className="font-mono">/update_payment</span>; a later item
+            summary CSV still replaces the school total from the full export.
           </p>
           <p className="mb-4 rounded-xl bg-cream px-3 py-2 font-mono text-xs text-chocolate/80">
             Item Name,…,Net Amount Sold

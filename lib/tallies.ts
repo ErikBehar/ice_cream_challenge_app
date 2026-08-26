@@ -10,6 +10,7 @@ export const DEFAULT_STORE: Store = {
   donationUrl: "",
   showIceCreamPoster: true,
   seenDonors: [],
+  seenPayments: [],
   classrooms: [
     { roomNumber: "1", teacherName: "Ms. Patel", studentCount: 22, scoops: 18 },
     { roomNumber: "2", teacherName: "Mr. Chen", studentCount: 24, scoops: 20 },
@@ -32,6 +33,7 @@ export function createEmptyStore(): Store {
     donationUrl: "",
     showIceCreamPoster: true,
     seenDonors: [],
+    seenPayments: [],
     classrooms: [],
   };
 }
@@ -51,6 +53,7 @@ export function zeroOverallRaised(store: Store): Store {
   return {
     ...store,
     overallRaised: 0,
+    seenPayments: [],
   };
 }
 
