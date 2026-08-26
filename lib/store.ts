@@ -109,6 +109,7 @@ export async function updateStore(
   const run = writeChain.then(async () => {
     const current = await readStore();
     const updated = await updater(current);
+    if (updated === current) return current;
     const next: Store = {
       ...updated,
       lastUpdated: new Date().toISOString(),

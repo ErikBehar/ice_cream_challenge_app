@@ -32,19 +32,16 @@ export async function POST(request: Request) {
       uniqueFamilies = result.uniqueFamilies;
       duplicatesSkipped = result.duplicatesSkipped;
       warnings = result.warnings;
+      if (uniqueFamilies === 0) return current;
       return store;
     });
 
     if (uniqueFamilies === 0 && duplicatesSkipped === 0) {
-      return NextResponse.json(
-        {
-          error:
-            warnings[0] ||
-            "Could not match this purchase to a classroom on the roster.",
-          warnings,
-        },
-        { status: 400 },
-      );
+      return NextResponse.json({
+        ok: true,
+        message: "No classroom scoop to add for this form.",
+        warnings,
+      });
     }
 
     revalidatePath("/");
