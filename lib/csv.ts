@@ -35,13 +35,8 @@ const RESPONDENT_KEYS = [
 ];
 const NET_AMOUNT_KEYS = ["net amount sold"];
 const JSON_ROW_ARRAY_KEYS = ["rows", "purchases", "records"];
-const PAYMENT_ID_KEYS = [
-  "payment_id",
-  "payment id",
-  "id",
-  "document number",
-  "document_number",
-];
+const ITEM_ID_KEYS = ["id", "item_id", "item id"];
+const PAYMENT_ONLY_ID_KEYS = ["payment_id", "payment id"];
 
 function parseCsvRows(text: string): string[][] {
   const rows: string[][] = [];
@@ -681,7 +676,12 @@ function paymentTotalFromBody(body: unknown): number | null {
 function paymentIdFromBody(body: unknown): string {
   const [row] = jsonBodyToRecords(body);
   if (!row) return "";
-  return pick(row, PAYMENT_ID_KEYS);
+  // Prefer the line-item id so two items on the same CheddarUp payment both count.
+  const itemId = pick(row, ITEM_ID_KEYS);
+  if (itemId) return `item:${itemId}`;
+  const paymentId = pick(row, PAYMENT_ONLY_ID_KEYS);
+  if (paymentId) return `payment:${paymentId}`;
+  return "";
 }
 
 function paymentIdHash(paymentId: string): string {

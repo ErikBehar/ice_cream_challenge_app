@@ -246,18 +246,36 @@ describe("applyPaymentJson", () => {
     assert.equal(result.overallRaised, 1250);
   });
 
-  test("skips a repeat payment id", () => {
+  test("skips a repeat of the same line item", () => {
     const first = applyPaymentJson(createEmptyStore(), {
-      id: 16907482,
+      id: 34799675,
+      payment_id: 16907482,
       total: 40,
     });
     const second = applyPaymentJson(first.store, {
+      id: 34799675,
       payment_id: 16907482,
       total: 40,
     });
     assert.equal(second.result.duplicate, true);
     assert.equal(second.result.amountAdded, 0);
     assert.equal(second.store.overallRaised, 40);
+  });
+
+  test("counts every item even when they share a payment_id", () => {
+    const first = applyPaymentJson(createEmptyStore(), {
+      id: 34799675,
+      payment_id: 16907482,
+      total: 40,
+    });
+    const second = applyPaymentJson(first.store, {
+      id: 34799676,
+      payment_id: 16907482,
+      total: 15,
+    });
+    assert.equal(second.result.duplicate, false);
+    assert.equal(second.result.amountAdded, 15);
+    assert.equal(second.store.overallRaised, 55);
   });
 
   test("a later item summary CSV replaces the live total", () => {

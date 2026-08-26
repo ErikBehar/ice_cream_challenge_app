@@ -67,7 +67,7 @@ To add a payment amount to the school fundraising total, POST to `/update_paymen
 { "id": 16907482, "total": 40 }
 ```
 
-or `{ "total": "$40.00" }`. That **adds** this payment to the current total. Repeat posts of the same payment `id` / `payment_id` are skipped. A later item summary CSV upload still **replaces** the school total from the Square export.
+or `{ "total": "$40.00" }`. That **adds** this payment to the current total. Different items on the same CheddarUp payment are each counted. Only a repeat of the same line-item `id` is skipped. A later item summary CSV upload still **replaces** the school total from the Square export.
 
 Item summary (`examples/item-summary.csv`, Square export) sets the school-wide dollar total from **Net Amount Sold**:
 
