@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatPercent } from "@/lib/format";
 import { compareRoomNumber, scoopPercent } from "@/lib/tallies";
 import type { Classroom } from "@/lib/types";
@@ -8,6 +8,26 @@ import { GoalCelebration } from "./goal-celebration";
 import { IceCreamMark, StarMark } from "./icons";
 
 type SortMode = "room" | "percent";
+
+const SORT_STORAGE_KEY = "ice-cream-classroom-sort";
+
+function readStoredSort(): SortMode | null {
+  try {
+    const value = window.localStorage.getItem(SORT_STORAGE_KEY);
+    if (value === "room" || value === "percent") return value;
+  } catch {
+    // Private mode or blocked storage.
+  }
+  return null;
+}
+
+function writeStoredSort(sort: SortMode) {
+  try {
+    window.localStorage.setItem(SORT_STORAGE_KEY, sort);
+  } catch {
+    // Private mode or blocked storage.
+  }
+}
 
 export function ClassroomBoard({
   classrooms,
@@ -17,6 +37,16 @@ export function ClassroomBoard({
   percentTarget: number;
 }) {
   const [sort, setSort] = useState<SortMode>("room");
+
+  useEffect(() => {
+    const stored = readStoredSort();
+    if (stored) setSort(stored);
+  }, []);
+
+  function chooseSort(next: SortMode) {
+    setSort(next);
+    writeStoredSort(next);
+  }
 
   const sorted = useMemo(() => {
     const copy = [...classrooms];
@@ -47,13 +77,13 @@ export function ClassroomBoard({
         <div className="inline-flex rounded-full bg-white p-1 shadow-sm ring-1 ring-cream-dark">
           <SortButton
             active={sort === "room"}
-            onClick={() => setSort("room")}
+            onClick={() => chooseSort("room")}
           >
             Classroom number
           </SortButton>
           <SortButton
             active={sort === "percent"}
-            onClick={() => setSort("percent")}
+            onClick={() => chooseSort("percent")}
           >
             Highest percent
           </SortButton>
