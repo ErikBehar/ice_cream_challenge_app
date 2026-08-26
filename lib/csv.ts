@@ -93,6 +93,47 @@ function normalizeHeader(header: string): string {
   return header.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+function compactHeader(header: string): string {
+  return normalizeHeader(header).replace(/[_/]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+type StudentFieldKind = "first" | "last" | "classroom";
+
+function kindFromFieldName(value: string): StudentFieldKind | null {
+  if (/first\s*name/.test(value)) return "first";
+  if (/last\s*name/.test(value)) return "last";
+  if (/classroom|class\s*room/.test(value)) return "classroom";
+  return null;
+}
+
+function matchStudentHeader(
+  header: string,
+): { index: number; kind: StudentFieldKind } | null {
+  const compact = compactHeader(header);
+
+  const withStudent = compact.match(
+    /student\s*#?\s*(\d+)\s*:?\s*(first\s*name|last\s*name|classroom|class\s*room)\b/,
+  );
+  if (withStudent) {
+    const kind = kindFromFieldName(withStudent[2]);
+    return kind ? { index: Number(withStudent[1]), kind } : null;
+  }
+
+  // Zapier sometimes splits "Student #1: Classroom" into Student → "1: Classroom".
+  const numbered = compact.match(
+    /^(\d+)\s*:?\s*(first\s*name|last\s*name|classroom|class\s*room)\b/,
+  );
+  if (numbered) {
+    const kind = kindFromFieldName(numbered[2]);
+    return kind ? { index: Number(numbered[1]), kind } : null;
+  }
+
+  if (/classroom|class\s*room/.test(compact) && !/teacher/.test(compact)) {
+    return { index: 1, kind: "classroom" };
+  }
+  return null;
+}
+
 function pick(record: Record<string, string>, keys: string[]): string {
   for (const key of keys) {
     if (record[key]) return record[key];
@@ -167,12 +208,11 @@ function extractStudentSlots(record: Record<string, string>): StudentSlot[] {
   }
 
   for (const [header, value] of Object.entries(record)) {
-    const first = header.match(/student\s*#\s*(\d+)\s*:?\s*first\s*name/);
-    const last = header.match(/student\s*#\s*(\d+)\s*:?\s*last\s*name/);
-    const room = header.match(/student\s*#\s*(\d+)\s*:?\s*classroom/);
-    if (first) slot(Number(first[1])).first = value;
-    else if (last) slot(Number(last[1])).last = value;
-    else if (room) slot(Number(room[1])).classroom = value;
+    const matched = matchStudentHeader(header);
+    if (!matched || !value) continue;
+    if (matched.kind === "first") slot(matched.index).first = value;
+    else if (matched.kind === "last") slot(matched.index).last = value;
+    else slot(matched.index).classroom = value;
   }
 
   return [...byIndex.entries()]
@@ -190,27 +230,49 @@ function donorHash(roomNumber: string, donorKey: string): string {
   return createHash("sha256").update(`${roomNumber}\0${donorKey}`).digest("hex");
 }
 
+function pickClassroomLike(record: Record<string, string>): string {
+  const direct = pick(record, CLASSROOM_KEYS);
+  if (direct) return direct;
+  for (const [key, value] of Object.entries(record)) {
+    if (value && /classroom|class\s*room/.test(compactHeader(key))) return value;
+  }
+  return "";
+}
+
+function receivedFieldNames(record: Record<string, string>): string {
+  return Object.keys(record)
+    .filter((key) => record[key])
+    .sort()
+    .join(", ");
+}
+
 function donationEventsFromRow(
   record: Record<string, string>,
   rowNumber: number,
 ): DonationEvent[] {
   const respondent = pick(record, RESPONDENT_KEYS);
-  const slots = extractStudentSlots(record).filter((student) => student.classroom);
+  const slots = extractStudentSlots(record);
+  const slotsWithRoom = slots.filter((student) => student.classroom);
 
-  if (slots.length > 0) {
-    return slots.map((student) => ({
+  if (slotsWithRoom.length > 0) {
+    return slotsWithRoom.map((student) => ({
       classroomField: student.classroom,
       donor:
         respondent ||
-        [student.first, student.last].filter(Boolean).join(" "),
+        [student.first, student.last].filter(Boolean).join(" ") ||
+        pick(record, FAMILY_KEYS),
       rowNumber,
     }));
   }
 
+  const named = slots.find((student) => student.first || student.last);
   return [
     {
-      classroomField: pick(record, CLASSROOM_KEYS),
-      donor: respondent || pick(record, FAMILY_KEYS),
+      classroomField: pickClassroomLike(record),
+      donor:
+        respondent ||
+        (named ? [named.first, named.last].filter(Boolean).join(" ") : "") ||
+        pick(record, FAMILY_KEYS),
       rowNumber,
     },
   ];
@@ -323,7 +385,12 @@ export function applyDonationRecords(
       const classroom = roomKey ? rosterByKey.get(roomKey) : undefined;
 
       if (!event.classroomField) {
-        warnings.push(`Row ${event.rowNumber}: skipped (missing classroom).`);
+        const fields = receivedFieldNames(row);
+        warnings.push(
+          fields
+            ? `Row ${event.rowNumber}: skipped (missing classroom). Fields received: ${fields}.`
+            : `Row ${event.rowNumber}: skipped (missing classroom).`,
+        );
         return;
       }
       if (!classroom) {
@@ -406,6 +473,24 @@ function questionAnswer(record: Record<string, unknown>): unknown {
   return undefined;
 }
 
+function tryParseJsonObject(value: string): object | null {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return null;
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function wrappedAnswer(record: Record<string, unknown>): string {
+  const answer = questionAnswer(record);
+  if (isPrimitive(answer) && String(answer).trim()) return String(answer).trim();
+  return "";
+}
+
 function flattenToRecord(
   value: unknown,
   into: Record<string, string> = {},
@@ -414,6 +499,11 @@ function flattenToRecord(
 ): Record<string, string> {
   if (value == null || depth > 4) return into;
 
+  if (typeof value === "string") {
+    const parsed = tryParseJsonObject(value);
+    if (parsed) return flattenToRecord(parsed, into, prefix, depth + 1);
+  }
+
   if (isPrimitive(value)) {
     if (prefix) into[normalizeHeader(prefix)] = String(value).trim();
     return into;
@@ -421,6 +511,16 @@ function flattenToRecord(
 
   if (Array.isArray(value)) {
     for (const item of value) {
+      if (Array.isArray(item) && item.length === 2 && typeof item[0] === "string") {
+        const label = item[0];
+        const answer = item[1];
+        if (isPrimitive(answer) || answer == null) {
+          if (isPrimitive(answer) && String(answer).trim()) {
+            into[normalizeHeader(label)] = String(answer).trim();
+          }
+          continue;
+        }
+      }
       if (item && typeof item === "object" && !Array.isArray(item)) {
         const record = item as Record<string, unknown>;
         const label = questionLabel(record);
@@ -439,11 +539,26 @@ function flattenToRecord(
 
   for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
     const nextPrefix = prefix ? `${prefix} ${key}` : key;
+    if (typeof nested === "string") {
+      const parsed = tryParseJsonObject(nested);
+      if (parsed) {
+        flattenToRecord(parsed, into, "", depth + 1);
+        continue;
+      }
+    }
     if (isPrimitive(nested)) {
       const header = normalizeHeader(key);
       if (!(header in into)) into[header] = String(nested).trim();
       if (prefix) into[normalizeHeader(nextPrefix)] = String(nested).trim();
       continue;
+    }
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      const answer = wrappedAnswer(nested as Record<string, unknown>);
+      if (answer) {
+        into[normalizeHeader(nextPrefix)] = answer;
+        const header = normalizeHeader(key);
+        if (!(header in into)) into[header] = answer;
+      }
     }
     flattenToRecord(nested, into, nextPrefix, depth + 1);
   }

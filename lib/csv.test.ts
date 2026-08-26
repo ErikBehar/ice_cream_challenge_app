@@ -12,7 +12,7 @@ import type { Store } from "./types";
 function rosterStore(): Store {
   const { store } = applyClassroomCsv(
     createEmptyStore(),
-    "classroom,teacher,students\n12,Ms. Smith,24\n15,Mtro. Gonzalez,22\n",
+    "classroom,teacher,students\n12,Ms. Smith,24\n15,Mtro. Gonzalez,22\n22,Ms. Jessica Pineda,24\n",
   );
   return store;
 }
@@ -61,6 +61,42 @@ describe("jsonBodyToRecords", () => {
     });
     assert.equal(rows.length, 2);
     assert.equal(rows[1].classroom, "15");
+  });
+
+  test("reads a CheddarUp item purchase payload", () => {
+    const [row] = jsonBodyToRecords({
+      id: 34799675,
+      payment_id: 16907482,
+      tab_object_id: 8710250,
+      date: "2026-08-23T16:19:41.143Z",
+      status: "available",
+      name: "Just a Scoop",
+      "Student #1:  First Name": "Pia",
+      "Student #1: Classroom": "22 - Ms. Jessica Pineda (4)",
+      "Student #1:  Last Name": "Rivas",
+    });
+    assert.equal(row["student #1: classroom"], "22 - Ms. Jessica Pineda (4)");
+    assert.equal(row["student #1: first name"], "Pia");
+  });
+
+  test("reads Zapier keys after # is dropped or nested under Student", () => {
+    const [flat] = jsonBodyToRecords({
+      name: "Just a Scoop",
+      "Student 1: Classroom": "22 - Ms. Jessica Pineda (4)",
+      "Student 1: First Name": "Pia",
+      "Student 1: Last Name": "Rivas",
+    });
+    assert.equal(flat["student 1: classroom"], "22 - Ms. Jessica Pineda (4)");
+
+    const [nested] = jsonBodyToRecords({
+      name: "Just a Scoop",
+      Student: {
+        "1: Classroom": "22 - Ms. Jessica Pineda (4)",
+        "1: First Name": "Pia",
+        "1: Last Name": "Rivas",
+      },
+    });
+    assert.equal(nested["1: classroom"], "22 - Ms. Jessica Pineda (4)");
   });
 });
 
@@ -119,5 +155,73 @@ describe("applyDonationJson", () => {
     store = applyDonationCsv(store, "classroom,student\n15,Ramona St Clair\n").store;
     assert.equal(scoops(store, "12"), 0);
     assert.equal(scoops(store, "15"), 1);
+  });
+
+  test("counts a CheddarUp item purchase for classroom 22", () => {
+    const { store, result } = applyDonationJson(rosterStore(), {
+      id: 34799675,
+      payment_id: 16907482,
+      tab_object_id: 8710250,
+      date: "2026-08-23T16:19:41.143Z",
+      status: "available",
+      name: "Just a Scoop",
+      "Student #1:  First Name": "Pia",
+      "Student #1: Classroom": "22 - Ms. Jessica Pineda (4)",
+      "Student #1:  Last Name": "Rivas",
+    });
+    assert.equal(result.warnings.join("\n"), "");
+    assert.equal(result.uniqueFamilies, 1);
+    assert.equal(scoops(store, "22"), 1);
+  });
+
+  test("counts Zapier nested Student 1 classroom keys", () => {
+    const { store, result } = applyDonationJson(rosterStore(), {
+      name: "Just a Scoop",
+      Student: {
+        "1: Classroom": "22 - Ms. Jessica Pineda (4)",
+        "1: First Name": "Pia",
+        "1: Last Name": "Rivas",
+      },
+    });
+    assert.equal(result.warnings.join("\n"), "");
+    assert.equal(scoops(store, "22"), 1);
+  });
+});
+
+describe("applyDonationCsv", () => {
+  test("still reads the simple classroom,student CSV", () => {
+    const { store } = applyClassroomCsv(
+      createEmptyStore(),
+      "classroom,teacher,students\n1,Ms. Patel,22\n2,Mr. Chen,24\n8,Mr. Nguyen,25\n12,Ms. Okafor,22\n",
+    );
+    const { store: next, result } = applyDonationCsv(
+      store,
+      "classroom,student\n1,Patel Family\n1,Rivera Family\n2,Chen Family\n8,Nguyen Family\n12,Okafor Family\n",
+    );
+    assert.equal(result.uniqueFamilies, 5);
+    assert.equal(scoops(next, "1"), 2);
+    assert.equal(scoops(next, "2"), 1);
+    assert.equal(scoops(next, "8"), 1);
+    assert.equal(scoops(next, "12"), 1);
+  });
+
+  test("still reads a CheddarUp form export CSV with Student #1 headers", () => {
+    const { store } = applyClassroomCsv(
+      createEmptyStore(),
+      "classroom,teacher,students\n2,Ms. Kuwada,22\n15,Mtro. Gonzalez,22\n16,Ms. Martin,24\n",
+    );
+    const csv = [
+      "Respondent,Email,Date,Student #1:  First Name,Student #1:  Last Name,Student #1: Classroom,Student #2:  First Name,Student #2:  Last Name,Student #2: Classroom,Student #3 First Name,Student #3 Last Name,Student #3: Classroom,Document Number",
+      "Bartleby St Clair,,08/22/2025,Ramona,St Clair,15 - Mtro. Gonzalez (3-SI),,,,,,,FT5QR",
+      "Bartleby St Clair,,10/04/2025,Ramona,St Clair,15 - Mtro. Gonzalez (3-SI),,,,,,,GLRSO",
+      "Zolzaya Badral,,10/01/2025,Iveel,Enkhbayasgalan,02 - Ms. Kuwada (K),,,,,,,GJISK",
+      "Luke Xu,,10/01/2025,Luke,Xy,16 - Ms. Martin (3),,,,,,,GJFN0",
+    ].join("\n");
+    const { store: next, result } = applyDonationCsv(store, csv);
+    assert.equal(result.duplicatesSkipped, 1);
+    assert.equal(result.uniqueFamilies, 3);
+    assert.equal(scoops(next, "15"), 1);
+    assert.equal(scoops(next, "2"), 1);
+    assert.equal(scoops(next, "16"), 1);
   });
 });
