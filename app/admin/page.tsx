@@ -70,7 +70,7 @@ export default async function AdminPage() {
           <p className="mt-1 mb-3 text-sm text-chocolate/70">
             Accepts a simple donation list or last year’s PTA form export
             (Respondent, Student #1/#2/#3 names and classrooms). Classroom labels
-            like “15 - Mtro. Gonzalez (3-SI)” match roster room 15. The same
+            like “15 - Mx. Rivera (3-SI)” match roster room 15. The same
             family in the same classroom is still one scoop. Dollar amounts in
             this file are ignored — use the item summary CSV below for the
             school-wide total. Row-level names are discarded after the tallies

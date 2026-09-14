@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 
 export function updateSecret(): string {
-  return process.env.UPDATE_SECRET || process.env.ADMIN_PASSWORD || "";
+  return process.env.UPDATE_SECRET ?? "";
 }
 
 function sha256Hex(value: string): string {
@@ -31,10 +31,6 @@ export function providedUpdateSecret(request: Request, body: unknown): string {
     "";
   if (header) return header;
 
-  const url = new URL(request.url);
-  const query = (url.searchParams.get("secret") || url.searchParams.get("key") || "").trim();
-  if (query) return query;
-
   if (body && typeof body === "object" && !Array.isArray(body)) {
     const record = body as Record<string, unknown>;
     for (const key of ["secret", "update_secret", "updateSecret"]) {
@@ -57,7 +53,7 @@ export async function readAuthorizedJson(
       response: NextResponse.json(
         {
           error:
-            "Live updates are not configured. Set UPDATE_SECRET (or ADMIN_PASSWORD) on the server.",
+            "Live updates are not configured. Set UPDATE_SECRET on the server.",
         },
         { status: 503 },
       ),

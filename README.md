@@ -55,16 +55,18 @@ In addition to the donations CSV, Zapier can POST one purchase at a time to:
 
 Send JSON with the same fields as the donations CSV (simple `classroom` + `student`, or CheddarUp form columns such as `Respondent` and `Student #1: Classroom`). Each new family in a classroom adds one scoop. Repeat gifts by the same family in the same classroom are skipped. A later donations CSV upload still replaces classroom scoops from the full export.
 
-Protect the URL with `UPDATE_SECRET` (or `ADMIN_PASSWORD` if `UPDATE_SECRET` is unset). Zapier should send one of:
+Protect the URL with a dedicated `UPDATE_SECRET` (not the admin login password). Zapier should send one of:
 
 - Header `X-Update-Secret: your-secret`
 - Header `Authorization: Bearer your-secret`
-- Query `?secret=your-secret`
+- JSON body field `secret`
+
+Do not put the secret in the URL query string (`?secret=`). Those values leak in logs, proxies, and browser history.
 
 To add a payment amount to the school fundraising total, POST to `/update_payment` with the same secret and a JSON `total`:
 
 ```json
-{ "id": 16907482, "total": 40 }
+{ "id": 10001, "total": 40 }
 ```
 
 or `{ "total": "$40.00" }`. That **adds** this payment to the current total. Different items on the same CheddarUp payment are each counted. Only a repeat of the same line-item `id` is skipped. A later item summary CSV upload still **replaces** the school total from the Square export.
@@ -86,7 +88,7 @@ The app is a single Node web service. Tally data is a JSON file, so it needs a *
    - `ADMIN_PASSWORD` — the admin login password
    - `SESSION_SECRET` — a long random string, for example:
      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
-   - `UPDATE_SECRET` — optional shared secret for Zapier `POST /update` and `POST /update_payment`. If unset, those endpoints accept `ADMIN_PASSWORD` instead.
+   - `UPDATE_SECRET` — required shared secret for Zapier `POST /update` and `POST /update_payment`. Do not reuse `ADMIN_PASSWORD`.
 4. Add a **Volume** to the service. Mount path `/data` is fine. Railway sets `RAILWAY_VOLUME_MOUNT_PATH`; the app writes `store.json` there. Do not skip this or CSV/goal updates disappear on the next deploy.
 5. Under **Settings → Networking**, generate a public domain (or attach a custom one). HTTPS is provided on `*.up.railway.app`.
 6. After the first deploy, open `/admin`, log in, set the page title, donation URL, and goals, then upload the classroom roster, donations, and item summary CSVs.

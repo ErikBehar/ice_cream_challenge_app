@@ -14,7 +14,7 @@ import type { Store } from "./types";
 function rosterStore(): Store {
   const { store } = applyClassroomCsv(
     createEmptyStore(),
-    "classroom,teacher,students\n12,Ms. Smith,24\n15,Mtro. Gonzalez,22\n22,Ms. Jessica Pineda,24\n",
+    "classroom,teacher,students\n12,Ms. Smith,24\n15,Mx. Rivera,22\n22,Ms. Bennett,24\n",
   );
   return store;
 }
@@ -32,33 +32,33 @@ describe("jsonBodyToRecords", () => {
 
   test("reads CheddarUp form headers, including extra spaces", () => {
     const [row] = jsonBodyToRecords({
-      Respondent: "Bartleby St Clair",
-      "Student #1:  First Name": "Ramona",
-      "Student #1:  Last Name": "St Clair",
-      "Student #1: Classroom": "15 - Mtro. Gonzalez (3-SI)",
+      Respondent: "Jordan Hale",
+      "Student #1:  First Name": "Sam",
+      "Student #1:  Last Name": "Hale",
+      "Student #1: Classroom": "15 - Mx. Rivera (3-SI)",
     });
-    assert.equal(row.respondent, "Bartleby St Clair");
-    assert.equal(row["student #1: first name"], "Ramona");
-    assert.equal(row["student #1: classroom"], "15 - Mtro. Gonzalez (3-SI)");
+    assert.equal(row.respondent, "Jordan Hale");
+    assert.equal(row["student #1: first name"], "Sam");
+    assert.equal(row["student #1: classroom"], "15 - Mx. Rivera (3-SI)");
   });
 
   test("flattens nested responses without losing student classroom keys", () => {
     const [row] = jsonBodyToRecords({
-      payer: { name: "Zolzaya Badral" },
+      payer: { name: "Priya Shah" },
       responses: {
-        "Student #1: Classroom": "02 - Ms. Kuwada (K)",
-        "Student #1: First Name": "Iveel",
+        "Student #1: Classroom": "02 - Ms. Hale (K)",
+        "Student #1: First Name": "Asha",
       },
     });
-    assert.equal(row["payer name"], "Zolzaya Badral");
-    assert.equal(row["student #1: classroom"], "02 - Ms. Kuwada (K)");
+    assert.equal(row["payer name"], "Priya Shah");
+    assert.equal(row["student #1: classroom"], "02 - Ms. Hale (K)");
   });
 
   test("reads an array of purchase rows", () => {
     const rows = jsonBodyToRecords({
       rows: [
         { classroom: "12", student: "Jane Doe" },
-        { classroom: "15", student: "Ramona St Clair" },
+        { classroom: "15", student: "Sam Hale" },
       ],
     });
     assert.equal(rows.length, 2);
@@ -67,38 +67,38 @@ describe("jsonBodyToRecords", () => {
 
   test("reads a CheddarUp item purchase payload", () => {
     const [row] = jsonBodyToRecords({
-      id: 34799675,
-      payment_id: 16907482,
-      tab_object_id: 8710250,
+      id: 10001,
+      payment_id: 20002,
+      tab_object_id: 30003,
       date: "2026-08-23T16:19:41.143Z",
       status: "available",
       name: "Just a Scoop",
-      "Student #1:  First Name": "Pia",
-      "Student #1: Classroom": "22 - Ms. Jessica Pineda (4)",
-      "Student #1:  Last Name": "Rivas",
+      "Student #1:  First Name": "Nina",
+      "Student #1: Classroom": "22 - Ms. Bennett (4)",
+      "Student #1:  Last Name": "Brooks",
     });
-    assert.equal(row["student #1: classroom"], "22 - Ms. Jessica Pineda (4)");
-    assert.equal(row["student #1: first name"], "Pia");
+    assert.equal(row["student #1: classroom"], "22 - Ms. Bennett (4)");
+    assert.equal(row["student #1: first name"], "Nina");
   });
 
   test("reads Zapier keys after # is dropped or nested under Student", () => {
     const [flat] = jsonBodyToRecords({
       name: "Just a Scoop",
-      "Student 1: Classroom": "22 - Ms. Jessica Pineda (4)",
-      "Student 1: First Name": "Pia",
-      "Student 1: Last Name": "Rivas",
+      "Student 1: Classroom": "22 - Ms. Bennett (4)",
+      "Student 1: First Name": "Nina",
+      "Student 1: Last Name": "Brooks",
     });
-    assert.equal(flat["student 1: classroom"], "22 - Ms. Jessica Pineda (4)");
+    assert.equal(flat["student 1: classroom"], "22 - Ms. Bennett (4)");
 
     const [nested] = jsonBodyToRecords({
       name: "Just a Scoop",
       Student: {
-        "1: Classroom": "22 - Ms. Jessica Pineda (4)",
-        "1: First Name": "Pia",
-        "1: Last Name": "Rivas",
+        "1: Classroom": "22 - Ms. Bennett (4)",
+        "1: First Name": "Nina",
+        "1: Last Name": "Brooks",
       },
     });
-    assert.equal(nested["1: classroom"], "22 - Ms. Jessica Pineda (4)");
+    assert.equal(nested["1: classroom"], "22 - Ms. Bennett (4)");
   });
 });
 
@@ -109,15 +109,15 @@ describe("applyDonationJson", () => {
     assert.equal(scoops(store, "15"), 0);
 
     store = applyDonationJson(store, {
-      Respondent: "Zolzaya Badral",
-      "Student #1: First Name": "Iveel",
-      "Student #1: Last Name": "Enkhbayasgalan",
-      "Student #1: Classroom": "15 - Mtro. Gonzalez (3-SI)",
+      Respondent: "Priya Shah",
+      "Student #1: First Name": "Asha",
+      "Student #1: Last Name": "Shah",
+      "Student #1: Classroom": "15 - Mx. Rivera (3-SI)",
     }).store;
 
     assert.equal(scoops(store, "12"), 1);
     assert.equal(scoops(store, "15"), 1);
-    assert.ok(store.seenDonors.every((hash) => !/jane|zolzaya|iveel/i.test(hash)));
+    assert.ok(store.seenDonors.every((hash) => !/jane|priya|asha/i.test(hash)));
   });
 
   test("skips the same family in the same classroom", () => {
@@ -154,22 +154,22 @@ describe("applyDonationJson", () => {
     }).store;
     assert.equal(scoops(store, "12"), 1);
 
-    store = applyDonationCsv(store, "classroom,student\n15,Ramona St Clair\n").store;
+    store = applyDonationCsv(store, "classroom,student\n15,Sam Hale\n").store;
     assert.equal(scoops(store, "12"), 0);
     assert.equal(scoops(store, "15"), 1);
   });
 
   test("counts a CheddarUp item purchase for classroom 22", () => {
     const { store, result } = applyDonationJson(rosterStore(), {
-      id: 34799675,
-      payment_id: 16907482,
-      tab_object_id: 8710250,
+      id: 10001,
+      payment_id: 20002,
+      tab_object_id: 30003,
       date: "2026-08-23T16:19:41.143Z",
       status: "available",
       name: "Just a Scoop",
-      "Student #1:  First Name": "Pia",
-      "Student #1: Classroom": "22 - Ms. Jessica Pineda (4)",
-      "Student #1:  Last Name": "Rivas",
+      "Student #1:  First Name": "Nina",
+      "Student #1: Classroom": "22 - Ms. Bennett (4)",
+      "Student #1:  Last Name": "Brooks",
     });
     assert.equal(result.warnings.join("\n"), "");
     assert.equal(result.uniqueFamilies, 1);
@@ -180,9 +180,9 @@ describe("applyDonationJson", () => {
     const { store, result } = applyDonationJson(rosterStore(), {
       name: "Just a Scoop",
       Student: {
-        "1: Classroom": "22 - Ms. Jessica Pineda (4)",
-        "1: First Name": "Pia",
-        "1: Last Name": "Rivas",
+        "1: Classroom": "22 - Ms. Bennett (4)",
+        "1: First Name": "Nina",
+        "1: Last Name": "Brooks",
       },
     });
     assert.equal(result.warnings.join("\n"), "");
@@ -210,14 +210,14 @@ describe("applyDonationCsv", () => {
   test("still reads a CheddarUp form export CSV with Student #1 headers", () => {
     const { store } = applyClassroomCsv(
       createEmptyStore(),
-      "classroom,teacher,students\n2,Ms. Kuwada,22\n15,Mtro. Gonzalez,22\n16,Ms. Martin,24\n",
+      "classroom,teacher,students\n2,Ms. Hale,22\n15,Mx. Rivera,22\n16,Mr. Okoye,24\n",
     );
     const csv = [
       "Respondent,Email,Date,Student #1:  First Name,Student #1:  Last Name,Student #1: Classroom,Student #2:  First Name,Student #2:  Last Name,Student #2: Classroom,Student #3 First Name,Student #3 Last Name,Student #3: Classroom,Document Number",
-      "Bartleby St Clair,,08/22/2025,Ramona,St Clair,15 - Mtro. Gonzalez (3-SI),,,,,,,FT5QR",
-      "Bartleby St Clair,,10/04/2025,Ramona,St Clair,15 - Mtro. Gonzalez (3-SI),,,,,,,GLRSO",
-      "Zolzaya Badral,,10/01/2025,Iveel,Enkhbayasgalan,02 - Ms. Kuwada (K),,,,,,,GJISK",
-      "Luke Xu,,10/01/2025,Luke,Xy,16 - Ms. Martin (3),,,,,,,GJFN0",
+      "Jordan Hale,,08/22/2025,Sam,Hale,15 - Mx. Rivera (3-SI),,,,,,,DOC001",
+      "Jordan Hale,,10/04/2025,Sam,Hale,15 - Mx. Rivera (3-SI),,,,,,,DOC002",
+      "Priya Shah,,10/01/2025,Asha,Shah,02 - Ms. Hale (K),,,,,,,DOC003",
+      "Morgan Lee,,10/01/2025,Taylor,Lee,16 - Mr. Okoye (3),,,,,,,DOC004",
     ].join("\n");
     const { store: next, result } = applyDonationCsv(store, csv);
     assert.equal(result.duplicatesSkipped, 1);
@@ -248,13 +248,13 @@ describe("applyPaymentJson", () => {
 
   test("skips a repeat of the same line item", () => {
     const first = applyPaymentJson(createEmptyStore(), {
-      id: 34799675,
-      payment_id: 16907482,
+      id: 10001,
+      payment_id: 20002,
       total: 40,
     });
     const second = applyPaymentJson(first.store, {
-      id: 34799675,
-      payment_id: 16907482,
+      id: 10001,
+      payment_id: 20002,
       total: 40,
     });
     assert.equal(second.result.duplicate, true);
@@ -264,13 +264,13 @@ describe("applyPaymentJson", () => {
 
   test("counts every item even when they share a payment_id", () => {
     const first = applyPaymentJson(createEmptyStore(), {
-      id: 34799675,
-      payment_id: 16907482,
+      id: 10001,
+      payment_id: 20002,
       total: 40,
     });
     const second = applyPaymentJson(first.store, {
-      id: 34799676,
-      payment_id: 16907482,
+      id: 10002,
+      payment_id: 20002,
       total: 15,
     });
     assert.equal(second.result.duplicate, false);
