@@ -78,6 +78,10 @@ Item Name,Variation,Price,Quantity Sold,Quantity Refunded,Amount Sold,Refunded A
 Single Scoop (PER CHILD Suggested Donation),,$350.00,10,,"$3,500.00",$0.00,"$3,500.00"
 ```
 
+## Report
+
+The **Report** button on `/admin` opens `/admin/report`: the school total against the goal, total scoops and students, how many classrooms met the scoop goal, and a per-classroom table (students, scoops, percent, goal met) with a total row. **Download CSV** saves the same report for a spreadsheet. Dollars are only stored as a school-wide total, so there are no per-classroom amounts.
+
 ## Railway
 
 The app is a single Node web service. Tally data is a JSON file, so it needs a **volume** or every deploy will reset progress.

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { formatPercent } from "@/lib/format";
-import { compareRoomNumber, scoopPercent } from "@/lib/tallies";
+import { compareRoomNumber, isClassroomGoalMet, scoopPercent } from "@/lib/tallies";
 import type { Classroom } from "@/lib/types";
 import { GoalCelebration } from "./goal-celebration";
 import { IceCreamMark, StarMark } from "./icons";
@@ -29,6 +29,32 @@ function writeStoredSort(sort: SortMode) {
   }
 }
 
+// Kept in memory as well so sorting still works when storage is blocked.
+let currentSort: SortMode | null = null;
+const sortListeners = new Set<() => void>();
+
+function subscribeToSort(listener: () => void) {
+  sortListeners.add(listener);
+  return () => {
+    sortListeners.delete(listener);
+  };
+}
+
+function getSort(): SortMode {
+  if (currentSort === null) currentSort = readStoredSort() ?? "room";
+  return currentSort;
+}
+
+function getServerSort(): SortMode {
+  return "room";
+}
+
+function chooseSort(next: SortMode) {
+  currentSort = next;
+  writeStoredSort(next);
+  sortListeners.forEach((listener) => listener());
+}
+
 export function ClassroomBoard({
   classrooms,
   percentTarget,
@@ -36,17 +62,7 @@ export function ClassroomBoard({
   classrooms: Classroom[];
   percentTarget: number;
 }) {
-  const [sort, setSort] = useState<SortMode>("room");
-
-  useEffect(() => {
-    const stored = readStoredSort();
-    if (stored) setSort(stored);
-  }, []);
-
-  function chooseSort(next: SortMode) {
-    setSort(next);
-    writeStoredSort(next);
-  }
+  const sort = useSyncExternalStore(subscribeToSort, getSort, getServerSort);
 
   const sorted = useMemo(() => {
     const copy = [...classrooms];
@@ -134,7 +150,7 @@ function ClassroomCard({
   percentTarget: number;
 }) {
   const percent = scoopPercent(classroom);
-  const metGoal = percent + 1e-9 >= percentTarget;
+  const metGoal = isClassroomGoalMet(classroom, percentTarget);
   const fill = Math.min(100, percent);
 
   return (

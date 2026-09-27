@@ -57,9 +57,15 @@ export function zeroOverallRaised(store: Store): Store {
   };
 }
 
-export function scoopPercent(classroom: Classroom): number {
+type ScoopTally = Pick<Classroom, "scoops" | "studentCount">;
+
+export function scoopPercent(classroom: ScoopTally): number {
   if (classroom.studentCount <= 0) return 0;
   return (classroom.scoops / classroom.studentCount) * 100;
+}
+
+export function isClassroomGoalMet(classroom: ScoopTally, percentTarget: number): boolean {
+  return scoopPercent(classroom) + 1e-9 >= percentTarget;
 }
 
 export function compareRoomNumber(a: string, b: string): number {
